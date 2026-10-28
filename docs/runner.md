@@ -1,7 +1,8 @@
 # Runner for nginx-proxy-docker
 
-nginx-proxy-docker runs on the **same amd64 VM runner** as frankenphp-docker and the other base
-images (`base-images-amd64`, shell executor, the VM's own Docker engine). The VM itself is described
+nginx-proxy-docker runs on the **same amd64 VM runners** as frankenphp-docker and the other base
+images (`base-images-amd64`, runner 2, and `base-images-amd64-2`, runner 3: shell executor, each
+VM's own Docker engine). The VM itself is described
 in `../frankenphp-docker/docs/runner.md`. This file lists only what nginx-proxy-docker adds.
 
 ## 1. Outbound access (in addition to the PHP bases' list)
@@ -23,11 +24,12 @@ in `../frankenphp-docker/docs/runner.md`. This file lists only what nginx-proxy-
 
 1. Create the project `silent/nginx-proxy-docker`, then Settings > General > Visibility, project
    features, permissions > **CI/CD** on (our GitLab disables it on new projects).
-2. The `base-images-amd64` runner > **add the tag `nginx-proxy-amd64`** (keep its other tags, "Run
-   untagged jobs" stays off). Then the project > Settings > CI/CD > Runners > Project runners >
-   **Enable for this project**.
-3. **CI/CD > Variables** (protected, masked where secret):
-   - `NTFY_TOPIC`: `gitlab-ci-alert-x564789`, the alerts topic of every project.
+2. **Both** runners, `base-images-amd64` and `base-images-amd64-2` > **add the tag
+   `nginx-proxy-amd64`** (keep their other tags, "Run untagged jobs" stays off). Then the project >
+   Settings > CI/CD > Runners > Project runners > **Enable for this project**, each of the two.
+   (Done on 28 Oct 2026 through the API.)
+3. **CI/CD > Variables**: nothing to add.
+   - `NTFY_TOPIC` is an instance variable (deploy-automation's `tools/gitlab-setup.sh`).
    - `NTFY_TOKEN`: ntfy access token, if the server requires one to publish.
 4. **Build > Pipeline schedules > New schedule**: `45 6 * * *`, timezone Europe/Paris, branch
    `main` (after nginx-redirect-docker at 06:30).
