@@ -63,17 +63,32 @@ printf '{"Results": [{"Vulnerabilities": [%s, %s]}]}' "$(vuln CVE-1 libssl3 CRIT
 printf '{"Results": [{"Vulnerabilities": [%s]}]}' "$(vuln CVE-1 libssl3 CRITICAL)" > "$tmp/t-same.json"
 printf '{"Results": [{"Vulnerabilities": [%s, %s]}]}' "$(vuln CVE-1 libssl3 CRITICAL)" "$(vuln CVE-3 libxml2 CRITICAL)" > "$tmp/t-new.json"
 printf '{"Results": [{"Target": "x", "Vulnerabilities": null}]}' > "$tmp/t-clean.json"
-td() { python3 -I "$ROOT/scripts/trivy-diff.py" "$@" 2>&1; }
+td() { env -u GATE_SEVERITIES python3 -I "$ROOT/scripts/trivy-diff.py" "$@" 2>&1; }
+tdh() { GATE_SEVERITIES=HIGH,CRITICAL python3 -I "$ROOT/scripts/trivy-diff.py" "$@" 2>&1; }
+printf '{"Results": [{"Vulnerabilities": [%s, %s]}]}' "$(vuln CVE-1 libssl3 CRITICAL)" "$(vuln CVE-4 stdlib HIGH)" > "$tmp/t-newhigh.json"
+echo "  (default GATE_SEVERITIES=CRITICAL, as the other images)"
 expect_ok "a CRITICAL the published image already has: pass" \
     "$(printf '  info candidate: 1 fixable CRITICAL, 0 fixable HIGH\n  info 1 fixable HIGH/CRITICAL of the published image fixed by the candidate\n  ok   no fixable CRITICAL the published image does not already have')" \
     td "$tmp/t-same.json" "$tmp/t-pub.json"
-expect_fail "a new fixable CRITICAL: refused" "CVE-3 in libxml2 (fixed in 9)" td "$tmp/t-new.json" "$tmp/t-pub.json"
+expect_fail "a new fixable CRITICAL: refused" "CVE-3 in libxml2, CRITICAL (fixed in 9)" td "$tmp/t-new.json" "$tmp/t-pub.json"
+expect_ok "a new fixable HIGH: pass (not gated by default)" \
+    "$(printf '  info candidate: 1 fixable CRITICAL, 1 fixable HIGH\n  info 1 fixable HIGH/CRITICAL of the published image fixed by the candidate\n  ok   no fixable CRITICAL the published image does not already have')" \
+    td "$tmp/t-newhigh.json" "$tmp/t-pub.json"
 expect_ok "clean candidate: pass" \
     "$(printf '  info candidate: 0 fixable CRITICAL, 0 fixable HIGH\n  info 2 fixable HIGH/CRITICAL of the published image fixed by the candidate\n  ok   no fixable CRITICAL the published image does not already have')" \
     td "$tmp/t-clean.json" "$tmp/t-pub.json"
 expect_ok "nothing published yet: report only" \
     "$(printf '  info candidate: 2 fixable CRITICAL, 0 fixable HIGH\n  info no published image to compare with: report only')" \
     td "$tmp/t-new.json" ""
+echo "  (GATE_SEVERITIES=HIGH,CRITICAL, this image's setting)"
+expect_fail "a new fixable HIGH: refused" "CVE-4 in stdlib, HIGH (fixed in 9)" tdh "$tmp/t-newhigh.json" "$tmp/t-pub.json"
+expect_fail "a new fixable CRITICAL: refused" "new fixable HIGH/CRITICAL in the candidate" tdh "$tmp/t-new.json" "$tmp/t-pub.json"
+expect_ok "a HIGH the published image already has: pass" \
+    "$(printf '  info candidate: 1 fixable CRITICAL, 1 fixable HIGH\n  info 0 fixable HIGH/CRITICAL of the published image fixed by the candidate\n  ok   no fixable HIGH/CRITICAL the published image does not already have')" \
+    tdh "$tmp/t-pub.json" "$tmp/t-pub.json"
+expect_ok "clean candidate: pass" \
+    "$(printf '  info candidate: 0 fixable CRITICAL, 0 fixable HIGH\n  info 2 fixable HIGH/CRITICAL of the published image fixed by the candidate\n  ok   no fixable HIGH/CRITICAL the published image does not already have')" \
+    tdh "$tmp/t-clean.json" "$tmp/t-pub.json"
 
 echo "--- served-ids.py (post-push check)"
 ids() { python3 -I "$ROOT/scripts/served-ids.py" "$@" 2>&1; }
@@ -154,5 +169,39 @@ expect_ok "os-updates: what only dist-upgrade would do is a warning" "$(printf '
 printf 'Err:1 http://deb.debian.org/debian trixie InRelease\n' >"$tmp/apt-broken.txt"
 expect_fail "os-updates: an apt output without both simulations -> refused" "FAIL unexpected apt-get output" \
     env OS_UPDATES_FILE="$tmp/apt-broken.txt" "$ROOT/tests/os-updates.sh" image
+
+echo "--- Go binaries: go-buildinfo.py on real \`go version -m\` outputs, go/ module files"
+set -a; . "$ROOT/versions.env"; set +a
+GM="$FIX/go-version-m"
+gbi_as() { local f="$1"; shift; python3 -I "$ROOT/scripts/go-buildinfo.py" "$@" < "$GM/$f.txt" 2>&1; }
+expect_fail "upstream's docker-gen 0.17.2 (Go 1.26.5) is refused: old Go" "FAIL docker-gen: compiled by Go 1.26.5, not 1.27.3" \
+    gbi_as upstream-docker-gen docker-gen 1.27.3 "$MIN_GO_VERSION" "$DOCKER_GEN_GO_GET"
+expect_fail "upstream's docker-gen is refused: compress below the fixed version" "FAIL docker-gen: github.com/klauspost/compress is v1.18.4, below the fixed v1.18.7" \
+    gbi_as upstream-docker-gen docker-gen 1.27.3 "$MIN_GO_VERSION" "$DOCKER_GEN_GO_GET"
+expect_fail "upstream's docker-gen is refused: go-archive and x/crypto too" "golang.org/x/crypto is v0.52.0, below the fixed v0.55.0" \
+    gbi_as upstream-docker-gen docker-gen 1.27.3 "$MIN_GO_VERSION" "$DOCKER_GEN_GO_GET"
+expect_fail "upstream's forego v0.18.8 is refused: x/text" "FAIL forego: golang.org/x/text is v0.14.0, below the fixed v0.41.0" \
+    gbi_as upstream-forego forego 1.27.3 "$MIN_GO_VERSION" "$FOREGO_GO_GET"
+expect_fail "announced Go matching an old binary is still below the floor" "compiled by Go 1.26.5, below the floor $MIN_GO_VERSION" \
+    gbi_as upstream-forego forego 1.26.5 "$MIN_GO_VERSION" ""
+expect_ok "our docker-gen passes" "ok   docker-gen: Go 1.27.3 (floor $MIN_GO_VERSION); github.com/klauspost/compress v1.18.7, github.com/moby/go-archive v0.3.0, golang.org/x/crypto v0.55.0" \
+    gbi_as ours-docker-gen docker-gen 1.27.3 "$MIN_GO_VERSION" "$DOCKER_GEN_GO_GET"
+expect_ok "our forego passes" "ok   forego: Go 1.27.3 (floor $MIN_GO_VERSION); golang.org/x/text v0.41.0" \
+    gbi_as ours-forego forego 1.27.3 "$MIN_GO_VERSION" "$FOREGO_GO_GET"
+expect_fail "a module of the list missing from the binary is refused" "example.com/absent is not in the binary" \
+    gbi_as ours-forego forego 1.27.3 "$MIN_GO_VERSION" "example.com/absent@v1.0.0"
+printf 'not a go binary\n' > "$tmp/notgo.txt"
+expect_fail "no build information: refused" "no build information" \
+    sh -c 'python3 -I "$1" x 1.27.3 1.27.3 "" < "$2"' _ "$ROOT/scripts/go-buildinfo.py" "$tmp/notgo.txt"
+for tool in docker-gen forego; do
+    case "$tool" in docker-gen) commit="$DOCKER_GEN_COMMIT" bumps="$DOCKER_GEN_GO_GET" ;; *) commit="$FOREGO_COMMIT" bumps="$FOREGO_GO_GET" ;; esac
+    [ "$(head -1 "$ROOT/go/$tool/go.mod")" = "// generated by scripts/update-go-deps.sh for ${commit}: do not edit" ] \
+        && pass "go/$tool/go.mod was generated for ${commit:0:12} (versions.env)" \
+        || bad "go/$tool/go.mod is not for ${commit}: run scripts/update-go-deps.sh"
+    for b in $bumps; do
+        grep -qE "^\s*(require\s+)?${b%@*} ${b#*@}( |$)" "$ROOT/go/$tool/go.mod" \
+            && pass "go/$tool/go.mod requires ${b%@*} ${b#*@}" || bad "go/$tool/go.mod does not require ${b%@*} ${b#*@}: run scripts/update-go-deps.sh"
+    done
+done
 
 if [ "$FAILED" = 0 ]; then echo "all unit tests passed"; else echo "unit tests FAILED" >&2; exit 1; fi

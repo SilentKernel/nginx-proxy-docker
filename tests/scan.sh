@@ -2,11 +2,12 @@
 # Vulnerability gate before a push (Trivy, pinned by digest):
 #   tests/scan.sh <candidate> [<published>]
 # Scans the candidate and, when given, the published image (pulled here), with the same
-# vulnerability DB. Fails only on a fixable CRITICAL the candidate has and the published image has
-# not (scripts/trivy-diff.py): the nightly must never publish a new fixable critical, but what
-# production already has must not block a security update either.
-# Fixable HIGH and what both images share are reported, with an ntfy alert. A scan that cannot run
-# fails too: a gate that passes when its scanner is down is no gate.
+# vulnerability DB. Fails on a fixable vulnerability of a GATE_SEVERITIES severity (versions.env:
+# HIGH and CRITICAL here, stricter than the bases) the candidate has and the published image has
+# not (scripts/trivy-diff.py): the nightly must never publish a new one, but what production already
+# has must not block a security update either. Any fixable HIGH/CRITICAL left is reported, with an
+# ntfy alert. A scan that cannot run fails too: a gate that passes when its scanner is down is no
+# gate.
 # Writes trivy-report.json / trivy-report.txt (candidate) and trivy-published.json at the repo root
 # (gitignored, CI artifacts).
 set -uo pipefail
@@ -14,6 +15,9 @@ set -uo pipefail
 CANDIDATE="${1:?usage: tests/scan.sh <candidate> [<published>]}"
 PUBLISHED="${2:-}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+set -a
+. "$ROOT/versions.env"
+set +a
 # Pinned by digest, like in .gitlab-ci.yml (which sets it in CI) and frankenphp-docker: a tag alone
 # can be re-pointed.
 TRIVY_IMAGE="${TRIVY_IMAGE:-aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa}"
@@ -49,7 +53,7 @@ found="$(python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1]));
 print(sum(len(r.get("Vulnerabilities") or []) for r in d.get("Results", [])))' "$ROOT/trivy-report.json")"
 if [ "$rc" = 0 ] && [ "$found" != 0 ]; then
     "$ROOT/scripts/notify.sh" high "warning,mag" "nginx-proxy-docker: ${found} fixable HIGH/CRITICAL CVEs" \
-        "In the candidate, none new and critical (pushed). See the trivy-report artifact; usually fixed by the next nightly rebuild."
+        "In the candidate, none new (pushed). See the trivy-report artifact; usually fixed by the next nightly rebuild."
 fi
 [ "$rc" = 0 ] && echo "==> scan.sh: passed" || echo "==> scan.sh: refused"
 exit "$rc"

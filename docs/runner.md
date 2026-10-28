@@ -8,8 +8,12 @@ in `../frankenphp-docker/docs/runner.md`. This file lists only what nginx-proxy-
 
 - `nginx.org` (download page: the latest 1.30.x release, for the freshness check)
 - `deb.debian.org` (`apt-get upgrade` in the Dockerfile, `tests/os-updates.sh`)
+- `github.com` (docker-gen and forego at their release commits), `proxy.golang.org` and
+  `sum.golang.org` (their modules, checked against go.sum)
+- Our registry: `silent/go-docker` (the Go builders). The job token must be allowed on go-docker:
+  deploy-automation's `tools/gitlab-setup.sh` does it.
 - Docker Hub (pulls only): `nginx:1.30-trixie`, `nginx:1.30.5-trixie` (guard test),
-  `nginxproxy/nginx-proxy`, `nginxproxy/docker-gen`, `nginxproxy/forego`,
+  `nginxproxy/nginx-proxy`, `golang:1.27.2-trixie` (Go guard test),
   `debian:trixie-20250811` (negative test of `tests/os-updates.sh`), `aquasec/trivy`
 - The smoke test mounts the VM's Docker socket read-only into the candidate (docker-gen reads it,
   limited to the test's own network) and creates a throwaway network.
@@ -37,6 +41,6 @@ in `../frankenphp-docker/docs/runner.md`. This file lists only what nginx-proxy-
 
 ## 3. First run
 
-Settings done, push `main`, then Build > Pipelines > **Run pipeline** on `main`. A run takes 4-6
+Settings done, push `main`, then Build > Pipelines > **Run pipeline** on `main`. A run takes 6-9
 minutes (the negative tests start the proxy several times). The first run pushes; the next ones push
 only when the content changed ("unchanged: … nothing pushed" in the build log otherwise).

@@ -8,22 +8,25 @@
 #   NGINX_BASE_TAG=1.30.6-trixie ./build.sh   build on a given official tag (rollback, reproduction)
 #
 # The image starts FROM the official nginx:<series>-trixie (Debian, nginx.org's signed packages),
-# pulled fresh and pinned by digest, then `apt-get upgrade` for Debian fixes; docker-gen, forego and
-# upstream's /app come from their own images at the versions of versions.env, pinned by digest. The
-# Dockerfile refuses an nginx below MIN_NGINX_VERSION; --push refuses an nginx older than the moving
-# tag serves. An official image lagging behind nginx.org's latest <series>.x is reported (ntfy).
+# pulled fresh and pinned by digest, then `apt-get upgrade` for Debian fixes; upstream's /app comes
+# from nginxproxy/nginx-proxy:<version>, pinned by digest. docker-gen and forego are compiled from
+# their upstream release commits on our go-docker (pinned by digest, its Go version from its label)
+# with go/<tool>/go.mod + go.sum. The Dockerfile refuses an nginx below MIN_NGINX_VERSION and a Go
+# below MIN_GO_VERSION; --push refuses an nginx older than the moving tag serves. An official image
+# lagging behind nginx.org's latest <series>.x is reported (ntfy).
 #
 # Content fingerprint: a restart of nginx-proxy cuts every site for a few seconds, so the server is
 # only offered a new image when something in it changed. io.silent.content is the sha256 of the
-# installed Debian packages (dpkg), the nginx version, the digests of docker-gen, forego and upstream
-# nginx-proxy, and the Dockerfile + versions.env. When the moving tag already serves that
-# fingerprint, nothing is pushed (the gates still run: they are the nightly health check).
+# installed Debian packages (dpkg), the nginx and Go versions, the digest of upstream nginx-proxy,
+# the Dockerfile, versions.env, the Go guard and the go/ module files. When the moving tag already
+# serves that fingerprint, nothing is pushed (the gates still run: they are the nightly health check).
 #
 # Tags: <nginx>-trixie-YYYYMMDD (never overwritten, for rollbacks), <nginx>-trixie (latest build of
 # that version), <series>-trixie and latest (moving, what the server pulls).
 #
 # Before anything is pushed, the candidate must pass tests/smoke.sh (routing through docker-gen,
-# HTTP/HTTPS/HTTP2, upstream's template and the server's), tests/os-updates.sh (no Debian update
+# HTTP/HTTPS/HTTP2, upstream's template and the server's), tests/go-binaries.sh (docker-gen and
+# forego compiled by the expected Go, with the fixed modules), tests/os-updates.sh (no Debian update
 # pending) and tests/negative.sh (the gates still catch broken images); tests/scan.sh refuses a new
 # fixable CRITICAL CVE. The candidate lives under a private local name until the push, and after the
 # push the registry must serve exactly the tested image.
@@ -75,18 +78,32 @@ BASE_IMAGE="nginx@${BASE_DIGEST}"
 echo "    ${BASE_TAG} = ${BASE_IMAGE}: nginx ${NGINX_VERSION}"
 export NGINX_VERSION BASE_IMAGE
 
-# The upstream pieces, pinned by the digest their tag serves tonight.
+# go-docker, where docker-gen and forego are compiled: its digest and the Go it ships (its label).
+GO_TAG="${GO_BASE_IMAGE}:${GO_BASE_TAG}"
+echo "==> reading ${GO_TAG}"
+read -r GO_DIGEST GO_VERSION < <(docker buildx imagetools inspect "$GO_TAG" --format '{{json .}}' | python3 -I -c '
+import json, sys
+d = json.load(sys.stdin)
+image = d.get("image") or {}
+if "config" not in image:   # multi-platform index: one entry per platform
+    image = image[sys.argv[1]]
+labels = image.get("config", {}).get("Labels") or {}
+print(d["manifest"]["digest"], labels.get("dev.go-docker.go-version") or "-")
+' "$PLATFORM") || { echo "cannot read ${GO_TAG} (not logged in to the registry?)" >&2; exit 1; }
+[[ "$GO_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "${GO_TAG} announces Go '${GO_VERSION}', not a release" >&2; exit 1; }
+GO_IMAGE="${GO_BASE_IMAGE}@${GO_DIGEST}"
+export GO_IMAGE GO_VERSION
+echo "    ${GO_TAG} = ${GO_IMAGE}: Go ${GO_VERSION}"
+echo "    docker-gen ${DOCKER_GEN_VERSION} (${DOCKER_GEN_COMMIT:0:12}), forego ${FOREGO_VERSION} (${FOREGO_COMMIT:0:12}): compiled here"
+
+# Upstream nginx-proxy (its /app), pinned by the digest its tag serves tonight.
 pin() {   # <image:tag> -> <image>@<digest>
     local digest
     digest="$(docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' | python3 -I "$ROOT/scripts/served-ids.py" --digest)" \
         || { echo "cannot read $1" >&2; return 1; }
     echo "${1%:*}@${digest}"
 }
-DOCKER_GEN_IMAGE="$(pin "nginxproxy/docker-gen:${DOCKER_GEN_VERSION}-debian")"
-FOREGO_IMAGE="$(pin "nginxproxy/forego:${FOREGO_VERSION}-debian")"
 UPSTREAM_IMAGE="$(pin "nginxproxy/nginx-proxy:${NGINX_PROXY_VERSION}")"
-echo "    docker-gen ${DOCKER_GEN_VERSION}: ${DOCKER_GEN_IMAGE}"
-echo "    forego ${FOREGO_VERSION}: ${FOREGO_IMAGE}"
 echo "    nginx-proxy ${NGINX_PROXY_VERSION} (/app): ${UPSTREAM_IMAGE}"
 
 TAG_VERSION="${IMAGE}:${NGINX_VERSION}-trixie"
@@ -152,8 +169,12 @@ echo "==> building on ${BASE_IMAGE} (nginx ${NGINX_VERSION}, floor ${MIN_NGINX_V
 docker buildx build --pull --no-cache --load \
     --platform "$PLATFORM" \
     --build-arg BASE_IMAGE="$BASE_IMAGE" \
-    --build-arg DOCKER_GEN_IMAGE="$DOCKER_GEN_IMAGE" \
-    --build-arg FOREGO_IMAGE="$FOREGO_IMAGE" \
+    --build-arg GO_BASE_IMAGE="$GO_IMAGE" \
+    --build-arg GO_VERSION="$GO_VERSION" \
+    --build-arg MIN_GO_VERSION="$MIN_GO_VERSION" \
+    --build-arg DOCKER_GEN_COMMIT="$DOCKER_GEN_COMMIT" \
+    --build-arg FOREGO_COMMIT="$FOREGO_COMMIT" \
+    --build-arg FOREGO_VERSION="$FOREGO_VERSION" \
     --build-arg UPSTREAM_IMAGE="$UPSTREAM_IMAGE" \
     --build-arg NGINX_VERSION="$NGINX_VERSION" \
     --build-arg MIN_NGINX_VERSION="$MIN_NGINX_VERSION" \
@@ -168,8 +189,10 @@ docker buildx build --pull --no-cache --load \
     --label "org.opencontainers.image.base.digest=${BASE_DIGEST}" \
     --label "dev.nginx-proxy.nginx-version=${NGINX_VERSION}" \
     --label "dev.nginx-proxy.upstream-version=${NGINX_PROXY_VERSION}" \
-    --label "dev.nginx-proxy.docker-gen=${DOCKER_GEN_IMAGE}" \
-    --label "dev.nginx-proxy.forego=${FOREGO_IMAGE}" \
+    --label "dev.nginx-proxy.go-version=${GO_VERSION}" \
+    --label "dev.nginx-proxy.go-builder=${GO_IMAGE}" \
+    --label "dev.nginx-proxy.docker-gen=${DOCKER_GEN_VERSION} ${DOCKER_GEN_COMMIT}" \
+    --label "dev.nginx-proxy.forego=${FOREGO_VERSION} ${FOREGO_COMMIT}" \
     --label "dev.nginx-proxy.upstream=${UPSTREAM_IMAGE}" \
     -t "$BUILT" .
 
@@ -177,10 +200,12 @@ docker buildx build --pull --no-cache --load \
 # (no layer added). The candidate, tested and pushed, is that labelled image.
 packages="$(docker run --rm --platform "$PLATFORM" --entrypoint dpkg-query "$BUILT" -W -f '${Package} ${Version}\n')" \
     || { echo "cannot list the packages of ${BUILT}" >&2; exit 1; }
+# The Go binaries are fixed by the Go version, the commits (versions.env) and our module files:
+# go-docker's digest is left out, its nightly Debian rebuild does not change what it compiles.
 CONTENT="$({
-    printf 'nginx %s\n' "$NGINX_VERSION"
-    printf 'image %s\n' "${DOCKER_GEN_IMAGE#*@}" "${FOREGO_IMAGE#*@}" "${UPSTREAM_IMAGE#*@}"
-    cat Dockerfile versions.env
+    printf 'nginx %s\ngo %s\n' "$NGINX_VERSION" "$GO_VERSION"
+    printf 'image %s\n' "${UPSTREAM_IMAGE#*@}"
+    cat Dockerfile versions.env scripts/go-guard.sh go/docker-gen/go.mod go/docker-gen/go.sum go/forego/go.mod go/forego/go.sum
     sort <<<"$packages"
 } | python3 -I -c 'import hashlib, sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())')"
 printf 'FROM %s\nLABEL io.silent.content=%s\n' "$BUILT" "$CONTENT" \
@@ -196,11 +221,13 @@ fi
 
 echo "==> smoke test (routing, HTTPS, HTTP/2; upstream's template and the server's)"
 "$ROOT/tests/smoke.sh" "$CANDIDATE"
+echo "==> Go binaries (our builds: Go ${GO_VERSION}, fixed modules)"
+"$ROOT/tests/go-binaries.sh" "$CANDIDATE"
 echo "==> Debian updates (none may be pending)"
 "$ROOT/tests/os-updates.sh" "$CANDIDATE"
 echo "==> negative tests (the gates catch broken images)"
 "$ROOT/tests/negative.sh" "$CANDIDATE"
-echo "==> vulnerability gate (no new fixable CRITICAL against the published image)"
+echo "==> vulnerability gate (no new fixable ${GATE_SEVERITIES} against the published image)"
 "$ROOT/tests/scan.sh" "$CANDIDATE" ${PUBLISHED_DIGEST:+"${IMAGE}@${PUBLISHED_DIGEST}"}
 
 # Every identifier of the image the registry serves for <tag> (index, platform manifest, config):

@@ -1,11 +1,13 @@
-"""Compares two Trivy JSON reports (tests/scan.sh; same file as frankenphp-docker).
+"""Compares two Trivy JSON reports (tests/scan.sh; same file as frankenphp-docker, plus GATE_SEVERITIES).
 
     python3 -I scripts/trivy-diff.py <candidate.json> [<published.json>]
 
-Exit 1 when the candidate has a fixable CRITICAL (vulnerability id + package) the published image
-has not; 0 otherwise (without a published report: report only).
+Exit 1 when the candidate has a fixable vulnerability (id + package) of a gated severity the
+published image has not; 0 otherwise (without a published report: report only). The gated
+severities are GATE_SEVERITIES (comma separated, default CRITICAL, as the other images).
 """
 import json
+import os
 import sys
 
 
@@ -19,6 +21,8 @@ def main(argv):
     if len(argv) not in (2, 3):
         print(__doc__.strip(), file=sys.stderr)
         return 2
+    gated = [s.strip() for s in os.environ.get("GATE_SEVERITIES", "CRITICAL").split(",") if s.strip()]
+    label = "/".join(gated)
     cand = vulns(argv[1])
     pub = vulns(argv[2]) if len(argv) == 3 and argv[2] else None
     crit = sorted(k for k in cand if k[2] == "CRITICAL")
@@ -27,15 +31,15 @@ def main(argv):
     if pub is None:
         print("  info no published image to compare with: report only")
         return 0
-    new = [k for k in crit if k not in pub]
+    new = sorted(k for k in cand if k[2] in gated and k not in pub)
     fixed = [k for k in pub if k not in cand]
     print("  info %d fixable HIGH/CRITICAL of the published image fixed by the candidate" % len(fixed))
     if new:
-        print("  FAIL new fixable CRITICAL in the candidate:")
-        for vid, pkg, _ in new:
-            print("         %s in %s (fixed in %s)" % (vid, pkg, cand[(vid, pkg, "CRITICAL")]))
+        print("  FAIL new fixable %s in the candidate:" % label)
+        for vid, pkg, sev in new:
+            print("         %s in %s, %s (fixed in %s)" % (vid, pkg, sev, cand[(vid, pkg, sev)]))
         return 1
-    print("  ok   no fixable CRITICAL the published image does not already have")
+    print("  ok   no fixable %s the published image does not already have" % label)
     return 0
 
 

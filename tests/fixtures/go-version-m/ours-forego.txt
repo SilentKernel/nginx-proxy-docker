@@ -1,0 +1,18 @@
+/tmp/forego: go1.27.3
+	path	github.com/nginx-proxy/forego
+	mod	github.com/nginx-proxy/forego	v0.0.0-20260710093532-8eb5e52b8b69+dirty	
+	dep	github.com/daviddengcn/go-colortext	v1.0.0	h1:ANqDyC0ys6qCSvuEK7l3g5RaehL/Xck9EX8ATG8oKsE=
+	dep	github.com/subosito/gotenv	v1.6.0	h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8=
+	dep	golang.org/x/text	v0.41.0	h1:vz/seA0lnX87Othu2f/0L24RcgrXD9/YFTSuGjj3rH8=
+	build	-buildmode=exe
+	build	-compiler=gc
+	build	-trimpath=true
+	build	DefaultGODEBUG=cryptocustomrand=1,httpservecontentmaxranges=1,tlssecpmlkem=0,tracebacklabels=0,urlstrictcolons=0,x509sslcertoverrideplatform=0
+	build	CGO_ENABLED=0
+	build	GOARCH=amd64
+	build	GOOS=linux
+	build	GOAMD64=v1
+	build	vcs=git
+	build	vcs.revision=8eb5e52b8b69c7315a2064a61749f93f731701a2
+	build	vcs.time=2026-07-10T09:35:32Z
+	build	vcs.modified=true

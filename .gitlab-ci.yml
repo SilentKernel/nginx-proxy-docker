@@ -50,8 +50,10 @@ unit:
   script:
     - tests/unit.sh
 
+# The nginx floor on nginx:1.30.5, the Go floor on golang:1.27.2 and on go-docker (registry login).
 guard:
   stage: test
+  extends: .registry
   script:
     - tests/guard.sh
 
