@@ -7,8 +7,12 @@
 # template, no Debian update pending, negative tests, CVE gate) runs inside build.sh before anything
 # is pushed.
 #
+# After each publishing pipeline, mirror:dockerhub copies what the registry serves to Docker Hub
+# (DOCKERHUB_IMAGE below, public backup); it never blocks the publish.
+#
 # CI/CD variables (Settings > CI/CD > Variables): NTFY_TOPIC (notifications; unset = none),
-# NTFY_TOKEN (masked, optional). Pipeline variable: FORCE_PUSH=1 pushes an unchanged content.
+# NTFY_TOKEN (masked, optional), DOCKERHUB_USERNAME and DOCKERHUB_TOKEN (Docker Hub personal access
+# token, Read & Write; masked, protected). Pipeline variable: FORCE_PUSH=1 pushes an unchanged content.
 
 workflow:
   rules:
@@ -26,6 +30,9 @@ variables:
   NTFY_URL: https://notif.developpeur-freelance.io
   # Scanner of tests/scan.sh (refuses only a new fixable CRITICAL), pinned by digest, as in
   # frankenphp-docker. To update: check the release, then `docker buildx imagetools inspect aquasec/trivy:<version>`.
+  # Public backup of the image (job mirror:dockerhub). Here, not in versions.env: build.sh hashes
+  # versions.env into the content fingerprint, and the backup's name must not change the image.
+  DOCKERHUB_IMAGE: docker.io/silentk/nginx-proxy-docker
   TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
 
 # Publishing pipelines: default branch, pushed to, scheduled or started by hand.
@@ -93,6 +100,25 @@ trigger:dependents:
     project: silent/deploy-automation
     branch: main
     strategy: depend
+
+# Public backup on Docker Hub of what the registry now serves (scripts/mirror-dockerhub.sh): runs on
+# every publishing pipeline, also when build pushed nothing, and copies only the tags Docker Hub lacks
+# or serves differently, so a missed night is repaired by the next one. allow_failure: a Docker Hub
+# outage must not turn the publish red; the script sends its own ntfy alert.
+mirror:dockerhub:
+  stage: downstream
+  extends: .registry
+  resource_group: nginx-proxy
+  needs: [build]
+  allow_failure: true
+  timeout: 15m
+  rules:
+    - <<: *publish
+      when: on_success
+  script:
+    - '[ -n "${DOCKERHUB_USERNAME:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ] || { echo "DOCKERHUB_USERNAME / DOCKERHUB_TOKEN not set (Settings > CI/CD > Variables)" >&2; scripts/notify.sh high warning "nginx-proxy-docker: Docker Hub backup not configured" "DOCKERHUB_USERNAME / DOCKERHUB_TOKEN missing: nothing mirrored."; exit 1; }'
+    - echo "$DOCKERHUB_TOKEN" | docker login docker.io -u "$DOCKERHUB_USERNAME" --password-stdin
+    - scripts/mirror-dockerhub.sh "$IMAGE" "$DOCKERHUB_IMAGE"
 
 notify:failure:
   stage: notify

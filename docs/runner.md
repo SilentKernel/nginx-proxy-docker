@@ -16,6 +16,7 @@ in `../frankenphp-docker/docs/runner.md`. This file lists only what nginx-proxy-
 - Docker Hub (pulls only): `nginx:1.30-trixie`, `nginx:1.30.5-trixie` (guard test),
   `nginxproxy/nginx-proxy`, `golang:1.27.2-trixie` (Go guard test),
   `debian:trixie-20250811` (negative test of `tests/os-updates.sh`), `aquasec/trivy`
+- Docker Hub (push): `silentk/nginx-proxy-docker`, the public backup (job `mirror:dockerhub`).
 - The smoke test mounts the VM's Docker socket read-only into the candidate (docker-gen reads it,
   limited to the test's own network) and creates a throwaway network.
 - Disk: small (~250 MB images).
@@ -28,9 +29,12 @@ in `../frankenphp-docker/docs/runner.md`. This file lists only what nginx-proxy-
    `nginx-proxy-amd64`** (keep their other tags, "Run untagged jobs" stays off). Then the project >
    Settings > CI/CD > Runners > Project runners > **Enable for this project**, each of the two.
    (Done on 28 Oct 2026 through the API.)
-3. **CI/CD > Variables**: nothing to add.
+3. **CI/CD > Variables**:
    - `NTFY_TOPIC` is an instance variable (deploy-automation's `tools/gitlab-setup.sh`).
    - `NTFY_TOKEN`: ntfy access token, if the server requires one to publish.
+   - `DOCKERHUB_USERNAME` (`silentk`, protected) and `DOCKERHUB_TOKEN` (masked, protected): Docker
+     Hub personal access token, Repo Read & Write, for `mirror:dockerhub`. (Done on 28 Oct 2026
+     through the API.)
 4. **Build > Pipeline schedules > New schedule**: `45 6 * * *`, timezone Europe/Paris, branch
    `main` (after nginx-redirect-docker at 06:30).
 5. **Settings > Packages and registries > Cleanup policies**: **disabled**, as for the other bases

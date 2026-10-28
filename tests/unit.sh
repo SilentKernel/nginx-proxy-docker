@@ -107,6 +107,29 @@ expect_fail "--digest: an answer without a digest is refused" "no top-level dige
 expect_fail "a top that is not a digest is refused" "the top digest is not a digest" \
     sh -c 'python3 -I "$1" "Name:      r" "{\"config\": {\"digest\": \"sha256:cfg\"}}" linux/amd64 2>&1' _ "$ROOT/scripts/served-ids.py"
 
+echo "--- mirror-tags.py (Docker Hub backup: the tags of the published image)"
+# tests/fixtures/mirror/inspect-1.30-trixie.json: `imagetools inspect --format '{{json .}}'` of
+# 1.30-trixie on 28 Oct 2026 (its tags then: 1.30.6-trixie-20261028, 1.30.6-trixie, latest).
+mt() { python3 -I "$ROOT/scripts/mirror-tags.py" "$@" 2>&1; }
+mt_json() {   # <python expression changing d> <series>: the fixture, modified
+    python3 -I -c 'import json, sys; d = json.load(open(sys.argv[1])); L = d["image"]["config"]["Labels"]; exec(sys.argv[2]); print(json.dumps(d))' \
+        "$FIX/mirror/inspect-1.30-trixie.json" "$1" | mt "$2" linux/amd64
+}
+expect_ok "real image: digest, then the four tags in push order (moving last)" "$(printf '%s\n' \
+    sha256:63ae785711c775767c9871997afd92350d851e762589ae7f07e0ef9c53b5e926 \
+    1.30.6-trixie-20261028 1.30.6-trixie 1.30-trixie latest)" \
+    sh -c 'python3 -I "$1" 1.30 linux/amd64 < "$2"' _ "$ROOT/scripts/mirror-tags.py" "$FIX/mirror/inspect-1.30-trixie.json"
+expect_ok "multi-platform index: our platform's labels" "$(printf '%s\n' sha256:"$(printf 'a%.0s' $(seq 64))" \
+    1.30.7-trixie-20261231 1.30.7-trixie 1.30-trixie latest)" \
+    mt_json 'd["manifest"]["digest"] = "sha256:" + "a" * 64; L["dev.nginx-proxy.nginx-version"] = "1.30.7"; L["org.opencontainers.image.created"] = "2026-12-31T23:59:59Z"; d["image"] = {"linux/arm64": {}, "linux/amd64": d["image"]}' 1.30
+expect_fail "no nginx label: refused" "dev.nginx-proxy.nginx-version is ''" mt_json 'del L["dev.nginx-proxy.nginx-version"]' 1.30
+expect_fail "nginx of another series: refused" "is '1.30.6', not a 1.31.x release" mt_json 'pass' 1.31
+expect_fail "1.300.1 is not 1.30.x" "not a 1.30.x release" mt_json 'L["dev.nginx-proxy.nginx-version"] = "1.300.1"' 1.30
+expect_fail "no created label: refused" "org.opencontainers.image.created is ''" mt_json 'del L["org.opencontainers.image.created"]' 1.30
+expect_fail "created not in UTC: refused" "not a UTC timestamp" mt_json 'L["org.opencontainers.image.created"] = "2026-10-28T03:36:17+02:00"' 1.30
+expect_fail "no digest: refused" "no top-level digest" mt_json 'd["manifest"] = {}' 1.30
+expect_fail "not JSON: refused" "not the JSON of imagetools inspect" sh -c 'echo "Name: x" | python3 -I "$1" 1.30 linux/amd64 2>&1' _ "$ROOT/scripts/mirror-tags.py"
+
 echo "--- notify.sh"
 expect_ok "no NTFY_TOPIC: skipped, exit 0" "notify: NTFY_TOPIC not set, skipped: t" \
     env -u NTFY_TOPIC "$ROOT/scripts/notify.sh" high warning t m

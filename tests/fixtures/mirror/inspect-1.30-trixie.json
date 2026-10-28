@@ -1,0 +1,270 @@
+{
+ "image": {
+  "architecture": "amd64",
+  "config": {
+   "ArgsEscaped": true,
+   "Cmd": [
+    "forego",
+    "start",
+    "-r"
+   ],
+   "Entrypoint": [
+    "/app/docker-entrypoint.sh"
+   ],
+   "Env": [
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "NGINX_VERSION=1.30.6",
+    "NJS_VERSION=1.0.2",
+    "NJS_RELEASE=1~trixie",
+    "ACME_VERSION=0.4.1",
+    "PKG_RELEASE=1~trixie",
+    "DYNPKG_RELEASE=1~trixie",
+    "NGINX_PROXY_VERSION=1.11.6",
+    "DOCKER_GEN_VERSION=0.17.2",
+    "DOCKER_HOST=unix:///tmp/docker.sock"
+   ],
+   "ExposedPorts": {
+    "80/tcp": {}
+   },
+   "Labels": {
+    "dev.nginx-proxy.docker-gen": "0.17.2 497e50d07d3aa966d58223c80ff4280a6fde2510",
+    "dev.nginx-proxy.forego": "v0.18.8 8eb5e52b8b69c7315a2064a61749f93f731701a2",
+    "dev.nginx-proxy.go-builder": "registry.developpeur-freelance.io/silent/go-docker@sha256:40a5564b827edc3879197cbde6abd7ef1ea0d2c03733eddb3ef7700a9aadb32e",
+    "dev.nginx-proxy.go-version": "1.27.3",
+    "dev.nginx-proxy.nginx-version": "1.30.6",
+    "dev.nginx-proxy.upstream": "nginxproxy/nginx-proxy@sha256:dd78565eca9742624655bb743723e0aeeab552153c4eea01095e4266c59150d5",
+    "dev.nginx-proxy.upstream-version": "1.11.6",
+    "io.silent.content": "0413fe1d0e3ccf457d3db89606a92c17a9d655399f1eb53102f25609e276d2a2",
+    "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>",
+    "org.opencontainers.image.base.digest": "sha256:a7675fcee220f59b4a99f7098c06a0d5d999c2c0ee37c0211efb780536e5cb20",
+    "org.opencontainers.image.base.name": "docker.io/library/nginx:1.30-trixie",
+    "org.opencontainers.image.created": "2026-10-28T01:36:17Z",
+    "org.opencontainers.image.description": "nginx-proxy 1.11.6 on nginx 1.30.6 (official trixie image + apt-get upgrade)",
+    "org.opencontainers.image.revision": "f33b9a1",
+    "org.opencontainers.image.title": "nginx-proxy",
+    "org.opencontainers.image.version": "1.30.6-trixie"
+   },
+   "StopSignal": "SIGQUIT",
+   "WorkingDir": "/app/"
+  },
+  "created": "2026-10-28T01:36:42.780495543Z",
+  "history": [
+   {
+    "comment": "debuerreotype 0.17",
+    "created": "2026-10-20T21:32:55Z",
+    "created_by": "# debian.sh --arch 'amd64' out/ 'trixie' '@1792531975'"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.201588091Z",
+    "created_by": "LABEL maintainer=NGINX Docker Maintainers <docker-maint@nginx.com>",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.201588091Z",
+    "created_by": "ENV NGINX_VERSION=1.30.6",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.201588091Z",
+    "created_by": "ENV NJS_VERSION=1.0.2",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.201588091Z",
+    "created_by": "ENV NJS_RELEASE=1~trixie",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.201588091Z",
+    "created_by": "ENV ACME_VERSION=0.4.1",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.201588091Z",
+    "created_by": "ENV PKG_RELEASE=1~trixie",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.201588091Z",
+    "created_by": "ENV DYNPKG_RELEASE=1~trixie",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.201588091Z",
+    "created_by": "RUN /bin/sh -c set -x     && groupadd --system --gid 101 nginx     && useradd --system --gid nginx --no-create-home --home /nonexistent --comment \"nginx user\" --shell /bin/false --uid 101 nginx     && apt-get update     && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates     &&     NGINX_GPGKEYS=\"573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3\";     NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg;     export GNUPGHOME=\"$(mktemp -d)\";     found='';     for NGINX_GPGKEY in $NGINX_GPGKEYS; do     for server in         hkp://keyserver.ubuntu.com:80         pgp.mit.edu     ; do         echo \"Fetching GPG key $NGINX_GPGKEY from $server\";         gpg1 --batch --keyserver \"$server\" --keyserver-options timeout=10 --recv-keys \"$NGINX_GPGKEY\" && found=yes && break;     done;     test -z \"$found\" && echo >&2 \"error: failed to fetch GPG key $NGINX_GPGKEY\" && exit 1;     done;     gpg1 --batch --export $NGINX_GPGKEYS > \"$NGINX_GPGKEY_PATH\" ;     rm -rf \"$GNUPGHOME\";     apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/*     && dpkgArch=\"$(dpkg --print-architecture)\"     && nginxPackages=\"         nginx=${NGINX_VERSION}-${PKG_RELEASE}         nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE}         nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE}         nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE}         nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE}         nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE}     \"     && case \"$dpkgArch\" in         amd64|arm64)             echo \"deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/debian/ trixie nginx\" >> /etc/apt/sources.list.d/nginx.list             && apt-get update             ;;         *)             tempDir=\"$(mktemp -d)\"             && chmod 777 \"$tempDir\"                         && savedAptMark=\"$(apt-mark showmanual)\"                         && apt-get update             && apt-get install --no-install-recommends --no-install-suggests -y                 cargo                 curl                 devscripts                 equivs                 git                 libxml2-utils                 lsb-release                 xsltproc             && (                 cd \"$tempDir\"                 && export CARGO_HOME=\"$tempDir/.cargo\"                 && REVISION=\"${NGINX_VERSION}-${PKG_RELEASE}\"                 && REVISION=${REVISION%~*}                 && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz                 && PKGOSSCHECKSUM=\"c16280934a44f7358992d39bb1d876a58e978c58371b96fd212de3f58c7ba40c31a683c54ee46c85d0844ca18fd7addeafbb29a8e06a9d1e164a8628a4739eee *${REVISION}.tar.gz\"                 && if [ \"$(openssl sha512 -r ${REVISION}.tar.gz)\" = \"$PKGOSSCHECKSUM\" ]; then                     echo \"pkg-oss tarball checksum verification succeeded!\";                 else                     echo \"pkg-oss tarball checksum verification failed!\";                     exit 1;                 fi                 && tar xzvf ${REVISION}.tar.gz                 && cd pkg-oss-${REVISION}                 && cd debian                 && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do                     make rules-$target;                     mk-build-deps --install --tool=\"apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes\"                         debuild-$target/nginx-$NGINX_VERSION/debian/control;                 done                 && make base module-geoip module-image-filter module-njs module-xslt module-acme             )                         && apt-mark showmanual | xargs apt-mark auto > /dev/null             && { [ -z \"$savedAptMark\" ] || apt-mark manual $savedAptMark; }                         && ls -lAFh \"$tempDir\"             && ( cd \"$tempDir\" && dpkg-scanpackages . > Packages )             && grep '^Package: ' \"$tempDir/Packages\"             && echo \"deb [ trusted=yes ] file://$tempDir ./\" > /etc/apt/sources.list.d/temp.list             && apt-get -o Acquire::GzipIndexes=false update             ;;     esac         && apt-get install --no-install-recommends --no-install-suggests -y                         $nginxPackages                         gettext-base                         curl     && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list         && if [ -n \"$tempDir\" ]; then         apt-get purge -y --auto-remove         && rm -rf \"$tempDir\" /etc/apt/sources.list.d/temp.list;     fi     && ln -sf /dev/stdout /var/log/nginx/access.log     && ln -sf /dev/stderr /var/log/nginx/error.log     && mkdir /docker-entrypoint.d # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.241281032Z",
+    "created_by": "COPY docker-entrypoint.sh / # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.26585595Z",
+    "created_by": "COPY 10-listen-on-ipv6-by-default.sh /docker-entrypoint.d # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.290065189Z",
+    "created_by": "COPY 15-local-resolvers.envsh /docker-entrypoint.d # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.313199477Z",
+    "created_by": "COPY 20-envsubst-on-templates.sh /docker-entrypoint.d # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.335050946Z",
+    "created_by": "COPY 30-tune-worker-processes.sh /docker-entrypoint.d # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.335050946Z",
+    "created_by": "ENTRYPOINT [\"/docker-entrypoint.sh\"]",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.335050946Z",
+    "created_by": "EXPOSE map[80/tcp:{}]",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.335050946Z",
+    "created_by": "STOPSIGNAL SIGQUIT",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-21T00:20:10.335050946Z",
+    "created_by": "CMD [\"nginx\" \"-g\" \"daemon off;\"]",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:24.581517109Z",
+    "created_by": "ARG NGINX_VERSION=1.30.6",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:24.581517109Z",
+    "created_by": "ARG MIN_NGINX_VERSION=1.30.6",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:24.581517109Z",
+    "created_by": "ARG NGINX_PROXY_VERSION=1.11.6",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:24.581517109Z",
+    "created_by": "ARG DOCKER_GEN_VERSION=0.17.2",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:24.581517109Z",
+    "created_by": "RUN |4 NGINX_VERSION=1.30.6 MIN_NGINX_VERSION=1.30.6 NGINX_PROXY_VERSION=1.11.6 DOCKER_GEN_VERSION=0.17.2 /bin/sh -c set -eu;     apt-get update -o APT::Update::Error-Mode=any;     DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -o Dpkg::Options::=--force-confold;     rm -rf /var/lib/apt/lists/* # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:24.746504804Z",
+    "created_by": "RUN |4 NGINX_VERSION=1.30.6 MIN_NGINX_VERSION=1.30.6 NGINX_PROXY_VERSION=1.11.6 DOCKER_GEN_VERSION=0.17.2 /bin/sh -c set -eu;     test -n \"${NGINX_VERSION}\" && test -n \"${MIN_NGINX_VERSION}\";     actual=\"$(nginx -v 2>&1 | sed -n 's|^nginx version: nginx/||p')\";     echo \"nginx ${actual} expected=${NGINX_VERSION} required>=${MIN_NGINX_VERSION}\";     [ \"${actual}\" = \"${NGINX_VERSION}\" ] || { echo \"nginx is ${actual}, not ${NGINX_VERSION}\" >&2; exit 1; };     lowest=\"$(printf '%s\\n%s\\n' \"${actual}\" \"${MIN_NGINX_VERSION}\" | sort -t. -k1,1n -k2,2n -k3,3n | head -1)\";     if [ \"${lowest}\" != \"${MIN_NGINX_VERSION}\" ]; then         echo \"nginx ${actual} is older than ${MIN_NGINX_VERSION}: refusing to build a vulnerable image\" >&2;         exit 1;     fi # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:24.746504804Z",
+    "created_by": "ENV NGINX_PROXY_VERSION=1.11.6 DOCKER_GEN_VERSION=0.17.2 DOCKER_HOST=unix:///tmp/docker.sock",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:24.966738637Z",
+    "created_by": "RUN |4 NGINX_VERSION=1.30.6 MIN_NGINX_VERSION=1.30.6 NGINX_PROXY_VERSION=1.11.6 DOCKER_GEN_VERSION=0.17.2 /bin/sh -c echo \"\\ninclude /etc/nginx/toplevel.conf.d/*.conf;\" >> /etc/nginx/nginx.conf    && sed -i 's/worker_connections.*;$/worker_connections  10240;/' /etc/nginx/nginx.conf    && sed -i -e '/^\\}$/{s//\\}\\nworker_rlimit_nofile 20480;/;:a' -e '$!N;$!ba' -e '}' /etc/nginx/nginx.conf    && mkdir -p '/etc/nginx/toplevel.conf.d'    && mkdir -p '/etc/nginx/dhparam'    && mkdir -p '/etc/nginx/certs'    && mkdir -p '/usr/share/nginx/html/errors' # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:33.201011481Z",
+    "created_by": "COPY /out/forego /usr/local/bin/forego # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:42.647063169Z",
+    "created_by": "COPY /out/docker-gen /usr/local/bin/docker-gen # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:42.699454233Z",
+    "created_by": "COPY /etc/nginx/network_internal.conf /etc/nginx/network_internal.conf # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:42.744361102Z",
+    "created_by": "COPY /app/ /app/ # buildkit"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:42.780495543Z",
+    "created_by": "WORKDIR /app/"
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:42.780495543Z",
+    "created_by": "ENTRYPOINT [\"/app/docker-entrypoint.sh\"]",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:42.780495543Z",
+    "created_by": "CMD [\"forego\" \"start\" \"-r\"]",
+    "empty_layer": true
+   },
+   {
+    "comment": "buildkit.dockerfile.v0",
+    "created": "2026-10-28T01:36:42.780495543Z",
+    "created_by": "LABEL io.silent.content=0413fe1d0e3ccf457d3db89606a92c17a9d655399f1eb53102f25609e276d2a2",
+    "empty_layer": true
+   }
+  ],
+  "os": "linux",
+  "rootfs": {
+   "diff_ids": [
+    "sha256:a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+    "sha256:78baf361c079f7059b1d5b5d56e6f48da1693764f4595b68b2287d34b0ff1f81",
+    "sha256:068985861108506fc6dc043df46a3484ef26cfe2d0b9a3723eb4c07b2a520bf3",
+    "sha256:343ba4b262863314e3eb021cc6d6e6a17b372ec229f6a06402ecbc480cce4a02",
+    "sha256:2ac83d9f898c0f3c91634f8338c2ccba14c3ed66e717bc1069f3a65fe8e1cd72",
+    "sha256:8ff1b124d4f5710b0c8380247b5132f69f9be2df7e2b3e9081755794cbcc72fd",
+    "sha256:2f6be841b28cf31e188edd7f5bac44910e6122f668310b9e1035a916e31d3c15",
+    "sha256:b13d53d3f0e28f7e041512cd4ea455550e55e09468fc2724e50a7cbf00e69884",
+    "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+    "sha256:02c632be3855b6328d42cc79acc6db36b701a00f8f582a54f19eec0f3fd12d15",
+    "sha256:37bf4ca794f05cbbce6c5894870bbe4fefc739b458a627b71bb0598e3ad8febd",
+    "sha256:02001b29212152a61d4e08af07fb0ab5833a36ed1234cc4c97d572f6ce9e5262",
+    "sha256:c406d6d92954dee633aa41e160c1bdc2ef8f8bc18cfd7676186a3864bc0be0e1",
+    "sha256:be1a4359f019e62be0687279d82c93985792298ed89f102459bda8936a31c985",
+    "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+   ],
+   "type": "layers"
+  }
+ },
+ "manifest": {
+  "digest": "sha256:63ae785711c775767c9871997afd92350d851e762589ae7f07e0ef9c53b5e926",
+  "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+  "size": 3447
+ },
+ "name": "registry.developpeur-freelance.io/silent/nginx-proxy-docker:1.30-trixie"
+}
