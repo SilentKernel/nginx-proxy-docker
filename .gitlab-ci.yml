@@ -11,6 +11,7 @@
 # (DOCKERHUB_IMAGE below, public backup); it never blocks the publish.
 #
 # CI/CD variables (Settings > CI/CD > Variables): NTFY_TOPIC (notifications; unset = none),
+# NTFY_TOPIC_NEWBASE (instance level, masked: the "new version" message only; unset = not sent),
 # NTFY_TOKEN (masked, optional), DOCKERHUB_USERNAME and DOCKERHUB_TOKEN (Docker Hub personal access
 # token, Read & Write; masked, protected). Pipeline variable: FORCE_PUSH=1 pushes an unchanged content.
 

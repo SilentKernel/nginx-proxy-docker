@@ -267,7 +267,8 @@ elif [ "$PUSH" = 1 ]; then
     push_tested "$TAG_VERSION"
     push_tested "$TAG_MOVING"
     push_tested "$TAG_LATEST"
-    "$ROOT/scripts/notify.sh" default "package,arrow_up" \
+    # A new version to roll out: the important channel (NTFY_TOPIC_NEWBASE), not NTFY_TOPIC.
+    NTFY_TOPIC="${NTFY_TOPIC_NEWBASE:-}" "$ROOT/scripts/notify.sh" default "package,arrow_up" \
         "nginx-proxy: new image (nginx ${NGINX_VERSION})" \
         "${TAG_MOVING} moved (nginx ${PUBLISHED_NGINX:-none} -> ${NGINX_VERSION}, content ${CONTENT:0:12}). ./refresh.sh on the server pulls it and asks before restarting nginx-proxy."
 else

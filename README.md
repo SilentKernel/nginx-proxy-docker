@@ -202,7 +202,7 @@ Dockerfile, `versions.env`, the Go guard and the `go/` module files. If the movi
 serves that fingerprint, nothing is pushed (the tests still run: they are the nightly health check).
 Anything added to `versions.env` changes the fingerprint, hence one new image.
 
-Notifications go to our ntfy (`scripts/notify.sh`, `NTFY_TOPIC`): a new image, the official image
+Notifications go to our ntfy (`scripts/notify.sh`, `NTFY_TOPIC`): a new image (on `NTFY_TOPIC_NEWBASE` (the important channel: something to roll out)), the official image
 lagging behind nginx.org's latest 1.30.x (built anyway), a failed pipeline, a failed Docker Hub copy.
 After a publish, `trigger:dependents` asks deploy-automation to rebuild what is built on this image.
 
